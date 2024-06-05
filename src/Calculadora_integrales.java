@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.function.DoubleUnaryOperator;
 
 public class Calculadora_integrales extends JFrame {
     private JTextField funcionField;
@@ -11,7 +12,7 @@ public class Calculadora_integrales extends JFrame {
     private JLabel resultadoLabel;
 
     public Calculadora_integrales() {
-        setTitle("Calculadora de Integrales");
+        setTitle("Calculadora de Longitud de Arco");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -33,7 +34,8 @@ public class Calculadora_integrales extends JFrame {
                 funcionField.setText(funcion);
             }
         });
-        JButton calcularButton = new JButton("Calcular Integral");
+
+        JButton calcularButton = new JButton("Calcular Longitud de Arco");
         calcularButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -48,8 +50,9 @@ public class Calculadora_integrales extends JFrame {
                         JOptionPane.showMessageDialog(null, "El número de intervalos (n) debe ser par.");
                         return;
                     }
-                    double resultado = simpson(a, b, n, funcion);
-                    resultadoLabel.setText("El resultado de la integral es: " + resultado);
+                    DoubleUnaryOperator f = x -> evaluarFuncion(funcion, x);
+                    double resultado = longitudArco(a, b, n, f);
+                    resultadoLabel.setText("La longitud de arco es: " + resultado);
                 }
             }
         });
@@ -86,21 +89,26 @@ public class Calculadora_integrales extends JFrame {
         setVisible(true);
     }
 
-    // Método para calcular la integral por el método de Simpson
-    public static double simpson(double a, double b, int n, String funcion) {
+    // Método para calcular la longitud de arco por el método de Simpson
+    public static double longitudArco(double a, double b, int n, DoubleUnaryOperator funcion) {
         double h = (b - a) / n;
-        double sum = funcion(a, funcion) + funcion(b, funcion);
+        double sum = 0;
 
-        for (int i = 1; i < n; i++) {
-            double x = a + i * h;
-            sum += 2 * funcion(x, funcion) * (i % 2 == 0 ? 2 : 4);
+        for (int i = 0; i < n; i++) {
+            double x0 = a + i * h;
+            double x1 = x0 + h;
+            double y0 = funcion.applyAsDouble(x0);
+            double y1 = funcion.applyAsDouble(x1);
+            double dx = x1 - x0;
+            double dy = y1 - y0;
+            sum += Math.sqrt(dx * dx + dy * dy);
         }
 
-        return sum * h / 3;
+        return sum;
     }
 
     // Método para evaluar una función en un punto
-    public static double funcion(double x, String funcion) {
+    public static double evaluarFuncion(String funcion, double x) {
         switch (funcion) {
             case "sin(x)":
                 return Math.sin(x);
@@ -112,16 +120,21 @@ public class Calculadora_integrales extends JFrame {
                 return Math.exp(x);
             default:
                 // Si la función no coincide con ninguna de las funciones conocidas, se considera una función algebraica
-                return evaluarFuncionAlgebraica(x, funcion);
+                return evaluarFuncionAlgebraica(funcion, x);
         }
     }
 
     // Método para evaluar una función algebraica en un punto
-    public static double evaluarFuncionAlgebraica(double x, String funcion) {
+    public static double evaluarFuncionAlgebraica(String funcion, double x) {
         javax.script.ScriptEngineManager mgr = new javax.script.ScriptEngineManager();
         javax.script.ScriptEngine engine = mgr.getEngineByName("JavaScript");
         try {
-            return (double) engine.eval(funcion.replaceAll("x", String.valueOf(x)));
+            Object result = engine.eval(funcion.replaceAll("x", String.valueOf(x)));
+            if (result instanceof Integer) {
+                return (double) ((Integer) result);
+            } else {
+                return (double) result;
+            }
         } catch (javax.script.ScriptException e) {
             e.printStackTrace();
             return Double.NaN;
@@ -132,3 +145,4 @@ public class Calculadora_integrales extends JFrame {
         new Calculadora_integrales();
     }
 }
+
