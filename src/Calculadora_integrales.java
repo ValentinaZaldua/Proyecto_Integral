@@ -118,8 +118,6 @@ public class Calculadora_integrales extends JFrame {
 
     // Método para evaluar una función algebraica en un punto
     public static double evaluarFuncionAlgebraica(double x, String funcion) {
-        // Aquí puedes implementar la evaluación de la función algebraica
-        // En este ejemplo, simplemente se evalúa la expresión algebraica utilizando la clase ScriptEngine
         javax.script.ScriptEngineManager mgr = new javax.script.ScriptEngineManager();
         javax.script.ScriptEngine engine = mgr.getEngineByName("JavaScript");
         try {
