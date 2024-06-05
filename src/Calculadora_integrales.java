@@ -2,7 +2,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.function.DoubleUnaryOperator;
 
 public class Calculadora_integrales extends JFrame {
     private JTextField funcionField;
@@ -12,13 +11,13 @@ public class Calculadora_integrales extends JFrame {
     private JLabel resultadoLabel;
 
     public Calculadora_integrales() {
-        setTitle("Calculadora de Longitud de Arco");
+        setTitle("Calculadora de Integrales y Longitud de Arco");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(6, 2));
+        panel.setLayout(new GridLayout(7, 2));
 
         funcionField = new JTextField();
         aField = new JTextField();
@@ -35,8 +34,8 @@ public class Calculadora_integrales extends JFrame {
             }
         });
 
-        JButton calcularButton = new JButton("Calcular Longitud de Arco");
-        calcularButton.addActionListener(new ActionListener() {
+        JButton calcularIntegralButton = new JButton("Calcular Integral");
+        calcularIntegralButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String funcion = funcionField.getText();
@@ -50,9 +49,29 @@ public class Calculadora_integrales extends JFrame {
                         JOptionPane.showMessageDialog(null, "El número de intervalos (n) debe ser par.");
                         return;
                     }
-                    DoubleUnaryOperator f = x -> evaluarFuncion(funcion, x);
-                    double resultado = longitudArco(a, b, n, f);
-                    resultadoLabel.setText("La longitud de arco es: " + resultado);
+                    double resultado = simpson(a, b, n, funcion, false);
+                    resultadoLabel.setText("El resultado de la integral es: " + resultado);
+                }
+            }
+        });
+
+        JButton calcularLongitudArcoButton = new JButton("Calcular Longitud de Arco");
+        calcularLongitudArcoButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String funcion = funcionField.getText();
+                double a = Double.parseDouble(aField.getText());
+                double b = Double.parseDouble(bField.getText());
+                if (a >= b) {
+                    JOptionPane.showMessageDialog(null, "El límite inferior (a) debe ser menor que el límite superior (b).");
+                } else {
+                    int n = Integer.parseInt(nField.getText());
+                    if (n % 2 != 0) {
+                        JOptionPane.showMessageDialog(null, "El número de intervalos (n) debe ser par.");
+                        return;
+                    }
+                    double resultado = simpson(a, b, n, funcion, true);
+                    resultadoLabel.setText("La longitud del arco es: " + resultado);
                 }
             }
         });
@@ -81,7 +100,8 @@ public class Calculadora_integrales extends JFrame {
         panel.add(new JLabel("Número de intervalos (n):"));
         panel.add(nField);
         panel.add(new JLabel(""));
-        panel.add(calcularButton);
+        panel.add(calcularIntegralButton);
+        panel.add(calcularLongitudArcoButton);
         panel.add(limpiarButton);
         panel.add(resultadoLabel);
 
@@ -89,26 +109,22 @@ public class Calculadora_integrales extends JFrame {
         setVisible(true);
     }
 
-    // Método para calcular la longitud de arco por el método de Simpson
-    public static double longitudArco(double a, double b, int n, DoubleUnaryOperator funcion) {
+    // Método para calcular la integral o la longitud de arco por el método de Simpson
+    public static double simpson(double a, double b, int n, String funcion, boolean longitudArco) {
         double h = (b - a) / n;
-        double sum = 0;
+        double sum = longitudArco ? longitudArcoIntegrando(a, funcion) + longitudArcoIntegrando(b, funcion) : funcion(a, funcion) + funcion(b, funcion);
 
-        for (int i = 0; i < n; i++) {
-            double x0 = a + i * h;
-            double x1 = x0 + h;
-            double y0 = funcion.applyAsDouble(x0);
-            double y1 = funcion.applyAsDouble(x1);
-            double dx = x1 - x0;
-            double dy = y1 - y0;
-            sum += Math.sqrt(dx * dx + dy * dy);
+        for (int i = 0; i < n-1; i++) {
+            double x = a + (i+1) * h;
+            double fx = longitudArco ? longitudArcoIntegrando(x, funcion) : funcion(x, funcion);
+            sum += ((i+1) % 2 == 0 ? 2 : 4) * fx;
         }
 
-        return sum;
+        return sum * h / 3;
     }
 
-    // Método para evaluar una función en un punto
-    public static double evaluarFuncion(String funcion, double x) {
+    // Método para evaluar la función
+    public static double funcion(double x, String funcion) {
         switch (funcion) {
             case "sin(x)":
                 return Math.sin(x);
@@ -119,9 +135,20 @@ public class Calculadora_integrales extends JFrame {
             case "exp(x)":
                 return Math.exp(x);
             default:
-                // Si la función no coincide con ninguna de las funciones conocidas, se considera una función algebraica
                 return evaluarFuncionAlgebraica(funcion, x);
         }
+    }
+
+    // Método para evaluar la longitud de arco en un punto
+    public static double longitudArcoIntegrando(double x, String funcion) {
+        double dfdx = derivada(x, funcion);
+        return Math.sqrt(1 + dfdx * dfdx);
+    }
+
+    // Método para evaluar la derivada de una función en un punto
+    public static double derivada(double x, String funcion) {
+        double h = 1e-5;
+        return (funcion(x + h, funcion) - funcion(x - h, funcion)) / (2 * h);
     }
 
     // Método para evaluar una función algebraica en un punto
